@@ -1,0 +1,7 @@
+
+step to run spring boot 
+
+1 move to root directory (where build.gradle)
+2. run ./gradlew bootRun
+3.
+

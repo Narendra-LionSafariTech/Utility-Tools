@@ -1,0 +1,49 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Web API support
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Database support (JPA + PostgreSQL)
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// Enable auto-reload during development
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// Testing
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+
+	  // Jakarta Validation API
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+
+    // Hibernate Validator - Implementation of Jakarta Validation
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
+
+    // Java Expression Language support (required by Hibernate Validator)
+    implementation 'org.glassfish:jakarta.el:4.0.2'
+}
+
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
