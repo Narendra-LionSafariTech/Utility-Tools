@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.UserResponse;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
@@ -47,9 +49,8 @@ public class UserController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // Login endpoint
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User loginRequest) {
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
         Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
 
         if (userOptional.isEmpty()) {
@@ -62,6 +63,11 @@ public class UserController {
         if (!user.getPassword().equals(loginRequest.getPassword())) {
             return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
         }
+
+        // Set last login time and device token
+        user.setLastLogin(new Date());
+        user.setDeviceToken(loginRequest.getDeviceToken());
+        userRepository.save(user);
 
         return new ResponseEntity<>(
                 new UserResponse("Login successful", user),
