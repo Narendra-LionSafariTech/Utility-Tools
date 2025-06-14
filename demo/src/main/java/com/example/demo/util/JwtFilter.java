@@ -14,13 +14,24 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtFilter extends OncePerRequestFilter {
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        String method = request.getMethod();
+
+        return path.equals("/api/v1/users/login")
+                || path.equals("/api/v1/admins/login")
+                || (path.equals("/api/v1/admins") && method.equalsIgnoreCase("POST"))
+                || (path.equals("/api/v1/users") && method.equalsIgnoreCase("POST"));
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Example logic: log the Authorization header
+        // You can add JWT validation here in the future
         String authHeader = request.getHeader("Authorization");
         System.out.println("Authorization Header: " + authHeader);
 

@@ -1,34 +1,25 @@
 package com.example.demo.dto;
 
-import com.example.demo.model.User;
-
 public class UserResponse {
     private String message;
-    private User user;
+    private UserDTO user;
+    private String token;
 
-    public UserResponse(String message, User user) {
+    public UserResponse(String message, UserDTO user) {
         this.message = message;
         this.user = user;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
+    public UserResponse(String message, UserDTO user, String token) {
         this.message = message;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
         this.user = user;
+        this.token = token;
     }
 
-    
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+    public UserDTO getUser() { return user; }
+    public void setUser(UserDTO user) { this.user = user; }
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 }
-
-
-

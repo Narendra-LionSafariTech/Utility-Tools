@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.LoginRequest;
+import com.example.demo.dto.UserDTO;
 import com.example.demo.dto.UserResponse;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.util.JwtUtil;
 
 import jakarta.validation.Valid;
 
@@ -30,23 +33,43 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // Get all users
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllUsers() {
         List<User> users = userRepository.findAll();
+        List<UserDTO> userDTOs = users.stream().map(UserDTO::mapToDTO).toList();
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Users fetched successfully");
-        response.put("users", users);
+        response.put("users", userDTOs);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody User user) {
+        if (userRepository.existsByEmail(user.getEmail())) {
+            return new ResponseEntity<>(
+                    new UserResponse("User with this email already exists", null, null),
+                    HttpStatus.CONFLICT);
+        }
+
+        if (userRepository.existsByMobile(user.getMobile())) {
+            return new ResponseEntity<>(
+                    new UserResponse("User with this mobile number already exists", null, null),
+                    HttpStatus.CONFLICT);
+        }
+
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
-        UserResponse response = new UserResponse("User registration successful", savedUser);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+
+        return new ResponseEntity<>(
+                new UserResponse("User registration successful", UserDTO.mapToDTO(savedUser)),
+                HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
@@ -58,49 +81,35 @@ public class UserController {
         }
 
         User user = userOptional.get();
-
-        // Compare passwords (plaintext check for now — NOT recommended for production)
-        if (!user.getPassword().equals(loginRequest.getPassword())) {
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
         }
 
-        // Set last login time and device token
         user.setLastLogin(new Date());
         user.setDeviceToken(loginRequest.getDeviceToken());
         userRepository.save(user);
 
+        String token = jwtUtil.generateToken(user.getEmail());
+
         return new ResponseEntity<>(
-                new UserResponse("Login successful", user),
-                HttpStatus.OK
-        );
+                new UserResponse("Login successful", UserDTO.mapToDTO(user), token),
+                HttpStatus.OK);
     }
 
-    // Example: Get user profile by ID
     @GetMapping("/{id}/profile")
-    public User getUserProfile(@PathVariable Long id) {
-        return userRepository.findById(id)
+    public ResponseEntity<?> getUserProfile(@PathVariable Long id) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(UserDTO.mapToDTO(user));
     }
 
-// Example: Accept a user account
     @PostMapping("/{id}/accept")
     public String acceptUser(@PathVariable Long id) {
-        // Add logic to update status in DB
         return "User with ID " + id + " accepted.";
     }
 
-// Example: Reject a user account
     @PostMapping("/{id}/reject")
     public String rejectUser(@PathVariable Long id) {
-        // Add logic to update status in DB
         return "User with ID " + id + " rejected.";
     }
-
 }
-
-// ------------------------------------test case-------------
-// // Create new user
-// @PostMapping
-// public User createUser(@Valid @RequestBody User user) {
-//     return userRepository.save(user);
-    // }

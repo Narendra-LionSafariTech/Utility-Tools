@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.AdminDTO;
 import com.example.demo.dto.AdminResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.model.Admin;
@@ -24,31 +25,39 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/admins")
 public class AdminController {
 
-    private AdminRepository adminRepository;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
+    private final AdminRepository adminRepository;
+    private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    // Register Admin
+    @Autowired
+    public AdminController(AdminRepository adminRepository, JwtUtil jwtUtil) {
+        this.adminRepository = adminRepository;
+        this.jwtUtil = jwtUtil;
+    }
+
     @PostMapping
     public ResponseEntity<AdminResponse> createAdmin(@Valid @RequestBody Admin admin) {
-        // Hash the password
+        Optional<Admin> existing = adminRepository.findByEmail(admin.getEmail());
+        if (existing.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new AdminResponse("Admin with this email already exists", null));
+        }
+
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         Admin savedAdmin = adminRepository.save(admin);
 
-        AdminResponse response = new AdminResponse("Admin registration successful", savedAdmin);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        AdminDTO adminDTO = new AdminDTO(savedAdmin);
+        return new ResponseEntity<>(
+                new AdminResponse("Admin registration successful", adminDTO),
+                HttpStatus.CREATED);
     }
 
-    // Admin Login
     @PostMapping("/login")
     public ResponseEntity<?> loginAdmin(@RequestBody LoginRequest loginRequest) {
         Optional<Admin> adminOpt = adminRepository.findByEmail(loginRequest.getEmail());
 
-        if (adminOpt.isEmpty()
-                || !passwordEncoder.matches(loginRequest.getPassword(), adminOpt.get().getPassword())) {
+        if (adminOpt.isEmpty() || !passwordEncoder.matches(
+                loginRequest.getPassword(), adminOpt.get().getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
 
@@ -59,7 +68,8 @@ public class AdminController {
 
         String token = jwtUtil.generateToken(admin.getEmail());
 
-        return ResponseEntity.ok(new AdminResponse("Login successful", admin));
+        AdminDTO adminDTO = new AdminDTO(admin);
+        return ResponseEntity.ok(new AdminResponse("Login successful", adminDTO, token));
     }
 
 }
